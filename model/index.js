@@ -1,151 +1,141 @@
 let fs = require('fs');
 let path = require('path');
-let crypto = require('crypto');
+let shortid = require('shortid');
 let filePath = path.join(__dirname, 'data.json');
 
-function createId() {
-  let newId = crypto.randomBytes(8).toString('hex');
-  let db = JSON.parse(fs.readFileSync(filePath));
-  let existingIds = db.reduce((ex, book) => {
-    ex.push(book.id);
-    book.authors.forEach(author => ex.push(author.id));
-    return ex;
-  }, []);
-  while (!existingIds.includes(newId)) {
-    newId = crypto.randomBytes(8).toString('hex');
-  }
-  return newId;
-}
-
-//NOT TESTED
 function createBook(data) {
   let db = JSON.parse(fs.readFileSync(filePath));
-  let { name, borrowed, description, authors } = data;
-  if (name && borrowed !==undefined && authors) {
+  let { name, borrowed, description } = data;
+  if (name && typeof borrowed === 'boolean') {
     if (name.length <= 30) {
-      authors = authors.map(author => {
-        authName = author.split(' ');
-        return { id: createId(), firstName: authName[0], lastName: authName[1] };
-      });
-      let newBook = { id: createId(), name, borrowed, description, authors };
-      db.books.push(newBook);
+      let newBook = {
+        id: shortid.generate(),
+        authors: [],
+        name,
+        borrowed,
+        description
+      };
+      db.push(newBook);
       fs.writeFileSync(filePath, JSON.stringify(db));
       return newBook;
     }
-    return { message: 'Invalid input: Name longer than 30 chraacters.'};
+    return {
+      error: 400,
+      message: 'Invalid input: Name longer than 30 characters.'
+    };
   }
-  return { message: 'Inavlid input: Missing fields.'};
+  return { error: 400, message: 'Inavlid input: Missing fields.'};
 }
 
-//WORKS!
 function getAllBooks() {
   let db = JSON.parse(fs.readFileSync(filePath));
   return db;
 }
 
-//WORKS!
 function getBook(id) {
   let db = JSON.parse(fs.readFileSync(filePath));
   let bookFound = db.find(book => book.id === id);
   if (bookFound) {
     return bookFound;
   }
-  return { message: 'Book not found.' };
+  return { error: 404, message: 'Book not found.' };
 }
 
-//NOT TESTED
 function updateBook(id, data) {
   let db = JSON.parse(fs.readFileSync(filePath));
   let bookToUpdate = getBook(id);
-  if (bookToUpdate.message) {
+  if (bookToUpdate.error) {
     return bookToUpdate;
   }
-  let { name, borrowed, description, authors } = data;
-  if (name && borrowed !== undefined && description && authors) {
-    bookToUpdate.name = name;
-    bookToUpdate.borrowed = borrowed;
-    bookToUpdate.description = description;
-    bookToUpdate.authors = authors;
-    fs.writeFileSync(filePath, JSON.stringify(db));
-    return bookToUpdate;
-  }
-  return { message: 'Inavlid input: Missing fields.' };
+  let i = db.findIndex(book => book.id === id);
+  let { name, borrowed, description } = data;
+  if (name) { bookToUpdate.name = name };
+  if (typeof borrowed === 'boolean') { bookToUpdate.borrowed = borrowed };
+  if (description) { bookToUpdate.description = description };
+  db[i] = bookToUpdate;
+  fs.writeFileSync(filePath, JSON.stringify(db));
+  return bookToUpdate;
 }
 
-//NOT TESTED
 function deleteBook(id) {
   let db = JSON.parse(fs.readFileSync(filePath));
   let deletedBook = getBook(id);
-  if (deletedBook.message) {
+  if (deletedBook.error) {
     return deletedBook;
   }
-  let i = db.indexOf(deletedBook);
+  let i = db.findIndex(book => book.id === id);
   db.splice(i, 1);
   fs.writeFileSync(filePath, JSON.stringify(db));
   return deletedBook;
 }
 
-//NOT TESTED OR UPDATED
-function createAuthor(data) {
+/////////////////////////////////////////////////////////////
+
+function createAuthor(id, data) {
   let db = JSON.parse(fs.readFileSync(filePath));
+  let bookToUpdate = getBook(id);
+  if (bookToUpdate.error) {
+    return bookToUpdate;
+  }
   let { firstName, lastName } = data;
   if (firstName && lastName) {
-    let newAuthor = { id: createId, firstName, lastName };
-    db.authors.push(newAuthor);
+    let newAuthor = { id: shortid.generate(), firstName, lastName };
+    let i = db.findIndex(book => book.id === id);
+    db[i].authors.push(newAuthor);
     fs.writeFileSync(filePath, JSON.stringify(db));
     return newAuthor;
   }
-  return { message: 'Invalid input: Missing fields.' };
+  return { error: 400, message: 'Invalid input: Missing fields.' };
 }
 
-//WORKS!
-function getAllAuthors() {
+function getAllAuthors(id) {
   let db = JSON.parse(fs.readFileSync(filePath));
-  let authors = db.reduce((authList, book) => {
-    book.authors.forEach(author => authList.push(author));
-    return authList;
-  }, []);
-  return authors;
+  let bookFound = getBook(id);
+  if (bookFound.error) {
+    return bookFound;
+  }
+  return bookFound.authors;
 }
 
-//WORKS!
-function getAuthor(id) {
-  let authors = getAllAuthors();
-  let authorFound = authors.find(author => author.id === id);
+function getAuthor(id, authId) {
+  let authors = getAllAuthors(id);
+  if (authors.error) {
+    return authors;
+  }
+  let authorFound = authors.find(author => author.id === authId);
   if (authorFound) {
     return authorFound;
   }
-  return { message: 'Author not found.' };
+  return { error: 404, message: 'Author not found.' };
 }
 
-//NOT TESTED
-function updateAuthor(id, data) {
+function updateAuthor(id, authId, data) {
   let db = JSON.parse(fs.readFileSync(filePath));
-  let authorToUpdate = getAuthor(id);
-  if (authorToUpdate.message) {
+  let authorToUpdate = getAuthor(id, authId);
+  if (authorToUpdate.error) {
     return authorToUpdate;
   }
   let { firstName, lastName } = data;
-  if (firstName && lastName) {
-    authorToUpdate.firstName = firstName;
-    authorToUpdate.lastName = lastName;
-    fs.writeFileSync(filePath, JSON.stringify(db));
-    return authorToUpdate;
-  }
-  return { message: 'Inavlid input: Missing fields.' }
+  if (firstName) { authorToUpdate.firstName = firstName; }
+  if (lastName) {authorToUpdate.lastName = lastName; }
+  let i = db.findIndex(book => book.id === id);
+  let j = db[i].authors.findIndex(auth => auth.id === authId);
+  db[i].authors[j] = authorToUpdate;
+  fs.writeFileSync(filePath, JSON.stringify(db));
+  return authorToUpdate;
 }
 
-//NOT TESTED
-function deleteAuthor(id) {
+function deleteAuthor(id, authId) {
   let db = JSON.parse(fs.readFileSync(filePath));
-  let deletedAuthor = getAuthor(id);
-  if (deletedAuthor.message) {
-    return deletedAuthor;
+  let authorToDelete = getAuthor(id, authId);
+  if (authorToDelete.error) {
+    return authorToDelete;
   }
-  let i = db.authors.indexOf(deletedAuthor);
-  db.authors.splice(i, 1);
-  fs.writeFileSync(filepath, JSON.stringify(db));
-  return deletedAuthor;
+  let i = db.findIndex(book => book.id === id);
+  let j = db[i].authors.findIndex(auth => auth.id === authId);
+  db[i].authors.splice(j, 1);
+  fs.writeFileSync(filePath, JSON.stringify(db));
+  return authorToDelete;
 }
 
 module.exports = {

@@ -2,8 +2,9 @@ let model = require('../model');
 
 function createBook(req, res) {
   let newBook = model.createBook(req.body);
-  if (newBook.message) {
-    return res.status(400).json({ error: newBook });
+  if (newBook.error) {
+    let { error, message } = newBook;
+    return res.status(error).json({ error: { message } });
   }
   res.status(201).json({ data: newBook });
 }
@@ -14,66 +15,74 @@ function getAllBooks(req, res) {
 
 function getBook(req, res) {
   let bookFound = model.getBook(req.params.id);
-  if (bookFound.message) {
-    return res.status(404).json({ error: bookFound });
+  if (bookFound.error) {
+    let { error, message } = bookFound;
+    return res.status(error).json({ error: { message } });
   }
   res.status(200).json({ data: bookFound });
 }
 
 function updateBook(req, res) {
   let updatedBook = model.updateBook(req.params.id, req.body);
-  if (updatedBook.message === 'Book not found.') {
-    return res.status(404).json({ error: updatedBook });
-  }
-  if (updateBook.message === 'Inavlid input: Missing fields.') {
-    return res.status(400).json({ error: updatedBook });
+  if (updatedBook.error) {
+    let { error, message } = updatedBook;
+    return res.status(error).json({ error: { message } });
   }
   res.status(200).json({ data: updatedBook });
 }
 
 function deleteBook(req, res) {
   let deletedBook = model.deleteBook(req.params.id);
-  if (deletedBook.message) {
-    return res.status(404).json({ error: deletedBook });
+  if (deletedBook.error) {
+    let { error, message } = deletedBook
+    return res.status(error).json({ error: { message } });
   }
   res.status(200).json({ data: deletedBook });
 }
 
+/////////////////////////////////////////////////////////////
+
 function createAuthor(req, res) {
-  let newAuthor = model.createAuthor(req.body);
-  if (newAuthor.message) {
-    return res.status(400).json({ error: newAuthor });
+  let newAuthor = model.createAuthor(req.params.id, req.body);
+  if (newAuthor.error) {
+    let { error, message } = newAuthor
+    return res.status(error).json({ error: { message } });
   }
   res.status(201).json({ data: newAuthor });
 }
 
 function getAllAuthors(req, res) {
-  return res.status(200).json({ data: model.getAllAuthors() });
+  let authors = model.getAllAuthors(req.params.id);
+  if (authors.errors) {
+    let { error, message } = authors;
+    return res.status(error).json({ error: { message }});
+  }
+  res.status(200).json({ data: authors });
 }
 
 function getAuthor(req, res) {
-  let authorFound = model.getAuthor(req.params.id);
-  if (authorFound.message) {
-    return res.status(404).json({ error: authorFound });
+  let authorFound = model.getAuthor(req.params.id, req.params.authId);
+  if (authorFound.error) {
+    let { error, message } = authorFound;
+    return res.status(error).json({ error: { message} });
   }
   res.status(200).json({ data: authorFound });
 }
 
 function updateAuthor(req, res) {
-  let updatedAuthor = model.updateAuthor(req.params.id, req.body);
-  if (updatedAuthor.message === 'Author not found.') {
-    return res.status(404).json({ error: updatedAuthor });
+  let updatedAuthor = model.updateAuthor(req.params.id, req.params.authId, req.body);
+  if (updatedAuthor.error) {
+    let { error, message } = updatedAuthor;
+    return res.status(error).json({ error: { message } });
   }
-  if (updatedAuthor.message === 'Inavlid input: Missing fields.') {
-    return res.status(400).json({ error: updatedAuthor });
-  }
-  res.status(200).json({ data: updatedAuthor });
+  return res.status(200).json({ data: updatedAuthor });
 }
 
 function deleteAuthor(req, res) {
-  let deletedAuthor = model.deleteAuthor(req.params.id);
-  if (deletedAuthor.message) {
-    return res.status(404).json({ error: deletedAuthor });
+  let deletedAuthor = model.deleteAuthor(req.params.id, req.params.authId);
+  if (deletedAuthor.error) {
+    let { error, message } = deletedAuthor;
+    return res.status(error).json({ error: { message } });
   }
   res.status(200).json({ data: deletedAuthor });
 }

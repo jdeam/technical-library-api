@@ -15,16 +15,16 @@ app.route('/books')
 
 app.route('/books/:id')
   .get(controller.getBook)
-  .put(controller.updateBook)
+  .patch(controller.updateBook)
   .delete(controller.deleteBook);
 
-app.route('/authors')
+app.route('/books/:id/authors')
   .get(controller.getAllAuthors)
   .post(controller.createAuthor);
 
-app.route('/authors/:id')
+app.route('/books/:id/authors/:authId')
   .get(controller.getAuthor)
-  .put(controller.updateAuthor)
+  .patch(controller.updateAuthor)
   .delete(controller.deleteAuthor);
 
 app.use((req, res, next) => {
